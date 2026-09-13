@@ -1,0 +1,126 @@
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors and local assistants
+.idea/
+.vscode/
+.claude/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Shared PyCharm run configurations are intentionally versioned.
+!.run/
+!.run/*.run.xml
+
+# Environment files and credentials
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+!**/.env.*.example
+.envrc
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+credentials/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+ENV/
+.eggs/
+*.egg
+*.egg-info/
+pip-wheel-metadata/
+build/
+dist/
+site/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+junit.xml
+
+# Node.js and frontend tooling
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.vite/
+.cache/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+frontend/dist/
+frontend/.build-check/
+frontend/coverage/
+
+# Test and browser artifacts
+test-results/
+playwright-report/
+blob-report/
+allure-results/
+allure-report/
+screenshots/
+traces/
+*.jtl
+
+# Runtime data and local databases
+*.log
+*.pid
+*.pid.lock
+*.sqlite
+*.sqlite3
+*.db
+data/
+tmp/
+temp/
+artifacts/
+**/.artifacts/
+evidence/
+
+# Local validation, recovery, and backup material
+.codex-validation/
+**/.codex-validation/
+.verification/
+**/.verification/
+.local-backups/
+runner-state/
+**/runner-state/
+**/runner-state-*/
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*~
+
+# Obsolete local duplicate; AGENTS.md remains the authoritative project file.
+AGENTS - 副本.md

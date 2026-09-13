@@ -1,0 +1,19 @@
+# V1-W5/r1 基础Web规则断言后端接入
+
+主控现派发。Backend W2已completed/idle并经主控审查：110专项、556全量/Ruff、主控实际HTTP版本锁定探针和4指纹通过。执行者AI-Test-Backend_sol，gpt-5.6-sol / xhigh。
+
+前置范围按实际依赖核定：W4五断言的语义与协议已通过，protocol.py固定为dd9f92c0aa7bb63c3682a9eb5d39a25f574128522b4843186fbba464d7ebad83，models.py为f33405453276d19bac96748bbf69aa93df55bfcc48b75e40a2dbd67c0880a16a。Runner正在W4/r3仅修executor自愈上下文脱敏，明确禁止改这两个文件；W5只读导入冻结解析器/models，不导入或依赖运行中的executor。W4整体隐私门禁仍未通过，正式加载必须等后续统一审查。W2最终schemas.py为e157a5a83d19d53952a26a812c35baea7f74666ed214a67b2d8bcc01170ee101，test_web_cases.py为550d8ff9274e645e7521ae1f3fe9535e5fd5d9875681490a7e24711f0ba9d217；保留其13动作成果。
+
+将W4的ASSERT_EXISTS、ASSERT_ENABLED、ASSERT_TEXT_EQUAL、ASSERT_INPUT_VALUE、ASSERT_TITLE接入WebCase资产DSL、持久不可变版本和锁定执行计划。新资产结构沿现有AssertVisible/AssertText/AssertUrl类的extra=forbid模型扩展；执行计划继续既有四字段，新类型参数约束和语义以已验W4任务包/最终协议为准。不要把计划中无用字段必须null的约束误当资产编辑格式：资产无用字段不得提交，计划序列化补null。
+
+存在/启用必须locator且不接受expected；文本相等/输入值必须locator和字符串expected；标题无locator且要求字符串expected。后三种expected允许空字符串，上限10000；timeout整数100..600000，默认沿既有30000。旧ASSERT_TEXT仍为包含，旧URL范围和三断言历史兼容不变；WebCase内容1MB、Secret过滤、模板、版本与ElementVersion归属/权限不放宽。
+
+实际源码 `_web_execution_plan` 已按通用getattr方式生成四字段，优先沿用；仅确有必要才修改runs相关局部校验/序列化，不重构队列/预算/回传。人工保存DRAFT、显式批准、锁定版本的新Run保持；不自动重算旧版本或重新执行旧Run。
+
+允许backend/app/modules/web_cases/schemas.py及必要局部模块校验、runs局部接入与专项测试。不得改I1关联服务/模型/迁移、Runner、Frontend、正式服务和其他任务证据。先核对W2/W4最终冻结版本，保留动作扩展和原三断言。
+
+隔离测试覆盖五断言合法/非法/空字符串/错locator/额外字段、保存重读与新版本批准、未批准/归档/无权限/错项目/错ElementVersion拒绝；走实际执行计划并用最终Runner解析器验证四字段，实际锁定旧版本不能漂移到current。还须验证合成完成回传/报告对新assertion节点的匹配及安全错误处理，不只构造Pydantic对象即计为完整接入。Backend全量与Ruff通过，相关Runner代码只读导入。
+
+独占 `.codex-validation/v1-w5/` 与 `文档/05-交付记录/V1-W5基础Web断言后端交付.md`。只用隔离SQLite/受控网络替身，不连接正式库/Redis/RabbitMQ/MinIO，不访问正式凭据/AI，不创建正式资产或Run，不重启。前端与正式完整执行另包验收。本文件不授予那些操作。
+
+先读根AGENTS；禁止任何跨任务消息/等待、Git、Claude、内部Agent。完成或超界阻塞后保存独占交付并final结束，由主控主动读取。

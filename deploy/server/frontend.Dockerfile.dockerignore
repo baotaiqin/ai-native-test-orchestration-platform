@@ -1,0 +1,33 @@
+# This allowlist is specific to deploy/server/frontend.Dockerfile.
+# The build context remains the project root, but unrelated and sensitive files
+# never enter this Docker build context.
+**
+
+!frontend/
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/index.html
+!frontend/tsconfig.json
+!frontend/tsconfig.app.json
+!frontend/tsconfig.node.json
+!frontend/vite.config.ts
+!frontend/src/
+!frontend/src/**
+
+!deploy/
+!deploy/server/
+!deploy/server/frontend.Dockerfile
+!deploy/server/frontend.Dockerfile.dockerignore
+!deploy/server/frontend-nginx.conf
+!deploy/server/frontend-entrypoint.sh
+
+# Defense in depth: these stay excluded even if the allowlist grows later.
+**/.env
+**/.env.*
+**/.git/**
+**/.idea/**
+**/.vscode/**
+**/.codex-validation/**
+**/node_modules/**
+**/dist/**
+**/__pycache__/**

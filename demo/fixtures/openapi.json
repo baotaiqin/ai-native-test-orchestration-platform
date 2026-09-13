@@ -1,0 +1,661 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "V1 本机资源演示系统",
+    "version": "1.0.0",
+    "description": "仅供合成测试；所有数据在进程内保存。关闭实例后清空。平台验收不得使用真实账户或密钥。"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8765",
+      "description": "本机演示实例；独立测试使用实际随机端口"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "检查演示系统",
+        "responses": {
+          "200": {
+            "description": "可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "service"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    },
+                    "service": {
+                      "type": "string",
+                      "enum": [
+                        "v1-demo"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "登录演示系统",
+        "description": "公开合成账号 demo / demo-pass；成功返回 data.token 与 HttpOnly demo_session Cookie；会话有效期20分钟。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "demo"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "writeOnly": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "token",
+                        "username"
+                      ],
+                      "properties": {
+                        "token": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string",
+                          "enum": [
+                            "demo"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "撤销当前演示会话",
+        "description": "幂等；未携带有效会话也返回成功。携带Cookie或Bearer时撤销对应Token。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "已登出",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "logged_out"
+                  ],
+                  "properties": {
+                    "logged_out": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resources": {
+      "get": {
+        "operationId": "listResources",
+        "summary": "列出当前演示实例资源",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "资源列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Resource"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createResource",
+        "summary": "创建资源",
+        "description": "name 去除首尾空白后长度必须为1～120；允许同名资源，每次创建返回不同的正整数id。",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "\\S",
+                    "example": "v1-resource"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Resource"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/resources/{id}": {
+      "delete": {
+        "operationId": "deleteResource",
+        "summary": "按ID精确清理资源",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "已删除",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deletion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "资源不存在；再次删除返回deleted=false",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Deletion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "查询合成用户",
+        "security": [{"bearerAuth": []}, {"cookieAuth": []}],
+        "parameters": [{"name": "q", "in": "query", "required": false, "schema": {"type": "string", "maxLength": 120}}],
+        "responses": {
+          "200": {"description": "用户列表", "content": {"application/json": {"schema": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/User"}}}}}}},
+          "401": {"description": "未认证", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}}
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "operationId": "listProducts",
+        "summary": "查询合成商品与库存",
+        "security": [{"bearerAuth": []}, {"cookieAuth": []}],
+        "parameters": [{"name": "q", "in": "query", "required": false, "schema": {"type": "string", "maxLength": 120}}],
+        "responses": {
+          "200": {"description": "商品列表", "content": {"application/json": {"schema": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Product"}}}}}}},
+          "401": {"description": "未认证", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}}
+        }
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "operationId": "listOrders",
+        "summary": "查询合成订单",
+        "security": [{"bearerAuth": []}, {"cookieAuth": []}],
+        "parameters": [{"name": "q", "in": "query", "required": false, "schema": {"type": "string", "maxLength": 120}}],
+        "responses": {
+          "200": {"description": "订单列表", "content": {"application/json": {"schema": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Order"}}}}}}},
+          "401": {"description": "未认证", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}}
+        }
+      },
+      "post": {
+        "operationId": "createOrder",
+        "summary": "创建订单并扣减库存",
+        "security": [{"bearerAuth": []}, {"cookieAuth": []}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["product_id", "quantity"], "properties": {"product_id": {"type": "integer", "minimum": 1}, "quantity": {"type": "integer", "minimum": 1, "maximum": 20}}}}}},
+        "responses": {
+          "201": {"description": "订单已创建", "content": {"application/json": {"schema": {"type": "object", "required": ["data"], "properties": {"data": {"$ref": "#/components/schemas/Order"}}}}}},
+          "400": {"description": "订单参数无效", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+          "401": {"description": "未认证", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+          "404": {"description": "商品不存在", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+          "409": {"description": "库存不足", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}}
+        }
+      }
+    },
+    "/api/orders/{id}": {
+      "delete": {
+        "operationId": "deleteOrder",
+        "summary": "按 ID 删除订单并恢复库存",
+        "security": [{"bearerAuth": []}, {"cookieAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer", "minimum": 1}}],
+        "responses": {
+          "200": {"description": "订单已删除", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Deletion"}}}},
+          "401": {"description": "未认证", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+          "404": {"description": "订单不存在", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Deletion"}}}}
+        }
+      }
+    },
+    "/api/download": {
+      "get": {
+        "operationId": "downloadSample",
+        "summary": "下载固定CSV样例",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "UTF-8 CSV",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slow": {
+      "get": {
+        "operationId": "slowResponse",
+        "summary": "可控延迟",
+        "parameters": [
+          {
+            "name": "delay_ms",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30000,
+              "default": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "等待结束",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "completed"
+                  ],
+                  "properties": {
+                    "completed": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求失败；error 字段给出固定错误码。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flaky": {
+      "get": {
+        "operationId": "flakyResponse",
+        "summary": "同一key首次503、之后200",
+        "description": "仅用于幂等读操作的有限重试验收；独立用例使用不同key。",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "default": "default"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "再次请求成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attempt"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "首次请求的受控故障",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attempt"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "demo_session"
+      }
+    },
+    "schemas": {
+      "Resource": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": ["id", "username", "display_name"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1},
+          "username": {"type": "string"},
+          "display_name": {"type": "string"}
+        }
+      },
+      "Product": {
+        "type": "object",
+        "required": ["id", "name", "price_cents", "stock"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1},
+          "name": {"type": "string"},
+          "price_cents": {"type": "integer", "minimum": 0},
+          "stock": {"type": "integer", "minimum": 0}
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": ["id", "user_id", "product_id", "product_name", "quantity", "total_cents", "status"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1},
+          "user_id": {"type": "integer", "minimum": 1},
+          "product_id": {"type": "integer", "minimum": 1},
+          "product_name": {"type": "string"},
+          "quantity": {"type": "integer", "minimum": 1},
+          "total_cents": {"type": "integer", "minimum": 0},
+          "status": {"type": "string", "enum": ["CREATED"]}
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Deletion": {
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Attempt": {
+        "type": "object",
+        "required": [
+          "attempt"
+        ],
+        "properties": {
+          "attempt": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,208 @@
+name: ai-native-test-platform-server
+
+# Source-free server deployment. Backend, Frontend and Demo images are built on the
+# developer workstation, transferred as an image archive, and loaded with
+# `docker image load` before this Compose project is started.
+services:
+  demo:
+    image: "${DEMO_IMAGE:?Set the loaded Demo image tag}"
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+    ports:
+      - "${DEMO_BIND_ADDRESS:-0.0.0.0}:${DEMO_PORT:-8765}:8765"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1770,uid=10002,gid=10002
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - platform
+
+  frontend:
+    image: "${FRONTEND_IMAGE:?Set the loaded Frontend image tag}"
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      TZ: UTC
+      PUBLIC_DEMO_USERNAME: "${PUBLIC_DEMO_USERNAME:-}"
+      PUBLIC_DEMO_PASSWORD: "${PUBLIC_DEMO_PASSWORD:-}"
+    ports:
+      - "${SERVER_BIND_ADDRESS:-127.0.0.1}:${SERVER_HTTP_PORT:-8080}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1770,uid=101,gid=101
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - platform
+
+  backend:
+    image: "${BACKEND_IMAGE:?Set the loaded Backend image tag}"
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      TZ: UTC
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8000"
+      APP_SECRET_KEY: "${APP_SECRET_KEY:?Set a dedicated JWT signing secret}"
+      APP_DATABASE_URL: "${APP_DATABASE_URL:?Set the backend MySQL URL}"
+      APP_REDIS_URL: "${APP_REDIS_URL:?Set the authenticated backend Redis URL}"
+      APP_REDIS_KEY_PREFIX: "${APP_REDIS_KEY_PREFIX:-ai-test-platform-server}"
+      APP_RABBITMQ_URL: "${APP_RABBITMQ_URL:?Set the backend RabbitMQ URL}"
+      APP_MINIO_ENDPOINT: minio:9000
+      APP_MINIO_ACCESS_KEY: "${MINIO_ROOT_USER:?Set the MinIO access key}"
+      APP_MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD:?Set the MinIO secret key}"
+      APP_MINIO_BUCKET: "${APP_MINIO_BUCKET:-ai-test-evidence}"
+      APP_MINIO_SECURE: "false"
+      APP_DEMO_ENABLED: "true"
+      APP_DEMO_PUBLIC_URL: "${DEMO_PUBLIC_URL:?Set the customer-facing Demo URL}"
+      APP_CORS_ORIGINS: "${APP_CORS_ORIGINS:?Set the public frontend origin}"
+      APP_SECRET_PROVIDER: fernet
+      APP_SECRET_FERNET_KEY_FILE: /run/secrets/app-fernet.key
+      APP_DEV_ADMIN_USERNAME: "${APP_DEV_ADMIN_USERNAME:-admin}"
+      APP_DEV_ADMIN_PASSWORD: "${APP_DEV_ADMIN_PASSWORD:?Set a non-default bootstrap password}"
+      APP_METRICS_ENABLED: "true"
+    volumes:
+      - type: bind
+        source: "${APP_SECRET_FERNET_KEY_FILE_HOST:?Set the host Fernet key file path}"
+        target: /run/secrets/app-fernet.key
+        read_only: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1770,uid=10001,gid=10001
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - platform
+
+  mysql:
+    image: "${MYSQL_IMAGE:?Set an explicitly versioned MySQL image}"
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      MYSQL_DATABASE: "${MYSQL_DATABASE:?Set the MySQL database name}"
+      MYSQL_USER: "${MYSQL_USER:?Set the MySQL application user}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:?Set the MySQL application password}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set the MySQL root password}"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - platform
+
+  redis:
+    image: "${REDIS_IMAGE:?Set an explicitly versioned Redis image}"
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?Set the Redis password}"
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - "${REDIS_PASSWORD:?Set the Redis password}"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    networks:
+      - platform
+
+  rabbitmq:
+    image: "${RABBITMQ_IMAGE:?Set an explicitly versioned RabbitMQ image}"
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_DEFAULT_USER:?Set the RabbitMQ user}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_DEFAULT_PASS:?Set the RabbitMQ password}"
+    ports:
+      - "${RUNNER_BIND_ADDRESS:-127.0.0.1}:${RUNNER_RABBITMQ_PORT:-5672}:5672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - platform
+
+  minio:
+    image: "${MINIO_IMAGE:?Set an explicitly versioned MinIO image}"
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      TZ: UTC
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:?Set the MinIO access key}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:?Set the MinIO secret key}"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - platform
+
+  prometheus:
+    image: "${PROMETHEUS_IMAGE:?Set an explicitly versioned Prometheus image}"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-7d}
+    ports:
+      - "${PROMETHEUS_BIND_ADDRESS:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus.server.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - platform
+
+networks:
+  platform:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+  prometheus_data:

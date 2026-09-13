@@ -1,0 +1,32 @@
+# Allowlist for deploy/server/backend.Dockerfile. The build context is the repository root.
+**
+
+!backend/
+!backend/pyproject.toml
+!backend/alembic.ini
+!backend/app/
+!backend/app/**
+!backend/migrations/
+!backend/migrations/**
+
+!deploy/
+!deploy/server/
+!deploy/server/backend.Dockerfile
+!deploy/server/backend.Dockerfile.dockerignore
+!deploy/server/backend-entrypoint.sh
+
+# Defense in depth if the allowlist is expanded later.
+**/.env
+**/.env.*
+**/.git/**
+**/.idea/**
+**/.vscode/**
+**/.claude/**
+**/.codex/**
+**/.codex-validation/**
+**/__pycache__/**
+**/*.pyc
+**/.pytest_cache/**
+**/.ruff_cache/**
+**/.venv/**
+**/tests/**

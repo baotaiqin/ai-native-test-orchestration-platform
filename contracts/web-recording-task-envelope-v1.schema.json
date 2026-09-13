@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ai-native-test-platform:web-recording-task-envelope:v1",
+  "title": "Web Recording Task Envelope V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task_type",
+    "recording_id",
+    "message_id",
+    "runner_id",
+    "project_id",
+    "attempt",
+    "enqueued_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "task_type": {
+      "const": "WEB_RECORDING"
+    },
+    "recording_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "message_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "runner_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "project_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "enqueued_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

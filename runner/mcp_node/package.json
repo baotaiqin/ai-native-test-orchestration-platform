@@ -1,0 +1,9 @@
+{
+  "name": "ai-native-test-platform-runner-mcp-runtime",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pinned local Playwright MCP runtime for bounded Web exploration",
+  "dependencies": {
+    "@playwright/mcp": "0.0.80"
+  }
+}

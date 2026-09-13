@@ -1,0 +1,4 @@
+*
+!demo/
+!demo/__init__.py
+!demo/server.py
