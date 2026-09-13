@@ -117,7 +117,60 @@ npm run dev
 
 打开 `http://127.0.0.1:5173`。后端健康检查位于 `http://127.0.0.1:8000/health`，Swagger UI 位于 `http://127.0.0.1:8000/docs`。
 
-首次执行任务前，还需要在 Runner 中心创建一次性 Registration Token，并按[PyCharm 启动指南](文档/01-使用指南/PyCharm启动指南.md#73-启动-runner-worker)注册和启动 Runner。仓库也提供了可共享的 `.run` 配置，可直接在 PyCharm 中启动前端、后端、测试和 Runner。
+仓库提供了可共享的 `.run` 配置，可直接在 PyCharm 中启动前端、后端、测试和 Runner。首次执行任务前，请先完成下面的 Runner 注册。
+
+## Runner 注册与启动
+
+Runner 当前运行在 Windows 用户环境中。开始前请确认已经安装 Runner 依赖和 Playwright Chromium，并且目标环境的 Backend、Redis 与 RabbitMQ 可用。
+
+### 1. 创建一次性 Registration Token
+
+使用管理员账号登录平台，进入 **Runner 中心**，创建 Registration Token。Token 只展示一次，请立即复制并妥善保管，不要写入命令、脚本、截图或仓库文件。
+
+### 2. 检查本机环境
+
+```powershell
+Set-Location runner
+..\.venv\Scripts\python.exe -m runner.main inspect
+..\.venv\Scripts\python.exe -m runner.main doctor
+```
+
+`inspect` 查看当前配置，`doctor` 检查 Windows DPAPI 和状态目录；两条命令都不会打印真实 credential。
+
+### 3. 注册 Runner
+
+连接本地开发环境：
+
+```powershell
+..\.venv\Scripts\python.exe -m runner.main register --backend-url http://127.0.0.1:8000 --name windows-runner --tag windows --api-slots 1 --web-slots 1 --performance-slots 1
+```
+
+连接已上线环境时，将 Backend 地址替换为公开地址：
+
+```powershell
+..\.venv\Scripts\python.exe -m runner.main register --backend-url http://124.220.195.195:8080 --name windows-runner --tag windows --api-slots 1 --web-slots 1 --performance-slots 1
+```
+
+命令会交互式提示输入 Registration Token，并隐藏输入内容。注册成功后，credential 只以当前 Windows 用户的 DPAPI 保护形式保存在 `%LOCALAPPDATA%\AI Native Test Platform\runner`，不要复制、编辑或提交该目录。
+
+### 4. 验证身份与心跳
+
+```powershell
+..\.venv\Scripts\python.exe -m runner.main heartbeat-once
+```
+
+返回 `ACTIVE` 后再启动 Worker。如果返回未授权，请让管理员撤销旧身份并重新生成一次性 Token 注册。
+
+### 5. 配置 RabbitMQ 并启动 Worker
+
+```powershell
+$env:AI_TEST_RABBITMQ_URL = "amqp://<用户名>:<密码>@<RabbitMQ主机>:5672/"
+..\.venv\Scripts\python.exe -m runner.main worker --web-slots 1 --performance-slots 1
+```
+
+RabbitMQ 地址和凭据由目标环境管理员提供，禁止使用 README 中的占位符直接连接。Worker 是前台长期进程：普通 API/Scenario 任务使用 API Slot，Web/录制任务使用 Web Slot，性能任务使用独占 PERFORMANCE Slot。按 `Ctrl+C` 可安全停止领取新任务。
+
+完整的 PyCharm 配置、首次注册说明与故障排查参见[PyCharm 启动指南](文档/01-使用指南/PyCharm启动指南.md#73-启动-runner-worker)。
 
 ## 基本检查
 
